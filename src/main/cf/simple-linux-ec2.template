@@ -188,8 +188,7 @@
              "aws s3 cp s3://ron-aws-webapp/hopje-demo-service.img .\n",
              "aws s3 cp s3://ron-aws-webapp/docker-compose.yml .\n",
              "docker load -i hopje-demo-service.img\n",
-             "sleep 5\n",
-             "docker-compose up -d\n"
+             "/usr/local/bin/docker-compose up -d\n"
              ]]
           }
         },
@@ -202,11 +201,18 @@
     "InstanceSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "Enable SSH access via port 22",
-        "SecurityGroupIngress" : [ {
+        "GroupDescription" : "Enable SSH access via port 22 and HTTP via port 8085",
+        "SecurityGroupIngress" : [ 
+        {
           "IpProtocol" : "tcp",
           "FromPort" : "22",
           "ToPort" : "22",
+          "CidrIp" : { "Ref" : "SSHLocation"}
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8085",
+          "ToPort" : "8085",
           "CidrIp" : { "Ref" : "SSHLocation"}
         } ]
       }
