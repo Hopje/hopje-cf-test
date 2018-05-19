@@ -171,6 +171,28 @@
       "Properties" : {
         "InstanceType" : { "Ref" : "InstanceType" },
         "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
+        "IamInstanceProfile" : {
+          "Ref" : "InstanceS3BucketProfile"
+        },
+        "UserData" : {
+          "Fn::Base64" : {
+             "Fn::Join" : [ "", [
+             "#!/bin/bash\n",
+             "yum update -y\n",
+             "yum install -y docker\n",
+             "service docker start\n",
+             "usermod -a -G docker ec2-user\n",
+             "curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose\n",
+             "chmod +x /usr/local/bin/docker-compose\n",
+             "cd /home/ec2-user\n",
+             "aws s3 cp s3://ron-aws-webapp/hopje-demo-service.img .\n",
+             "aws s3 cp s3://ron-aws-webapp/docker-compose.yml .\n",
+             "docker load -i hopje-demo-service.img\n",
+             "sleep 5\n",
+             "docker-compose up -d\n"
+             ]]
+          }
+        },
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
                           { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] }
@@ -187,6 +209,63 @@
           "ToPort" : "22",
           "CidrIp" : { "Ref" : "SSHLocation"}
         } ]
+      }
+    },
+    
+    "InstanceS3BucketProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [
+          {
+            "Ref" : "ReadS3BucketsRole"
+          }
+        ]
+      }
+    },
+    
+    "ReadS3BucketsPolicy" : {
+      "Type" : "AWS::IAM::Policy",
+      "Properties" : {
+        "PolicyName" : "ReadS3BucketsPolicy",
+        "PolicyDocument" : {
+          "Statement" : [
+            {
+              "Effect" : "Allow",
+              "Action" : [
+                "s3:Get*",
+                "s3:List*"
+              ],
+              "Resource" : "*"
+            }
+          ]
+        },
+        "Roles" : [
+          {
+            "Ref" : "ReadS3BucketsRole"
+          }
+        ]
+      }
+    },
+    
+    "ReadS3BucketsRole" : {
+      "Type" : "AWS::IAM::Role",
+      "Properties" : {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement" : [
+            {
+              "Effect" : "Allow",
+              "Principal" : {
+                "Service" : ["ec2.amazonaws.com"]
+              },
+              "Action" : [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path" : "/"
       }
     }
   },
